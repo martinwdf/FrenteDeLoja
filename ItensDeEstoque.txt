@@ -1,0 +1,6 @@
+2;Fone de ouvido;100.0;98
+8;Mouse;500.0;50
+7;MacBook;8000.0;55
+10;iPhone;4000.0;75
+5;Teclado;250.0;100
+15;HeadSet;400.0;45

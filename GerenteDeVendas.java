@@ -1,3 +1,13 @@
+import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.LineNumberReader;
+import java.io.RandomAccessFile;
 import java.util.InputMismatchException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -8,18 +18,104 @@ public class GerenteDeVendas {
     private Map<Integer,Venda> vendas;
     int numeroVenda;
     Estoque estoque;
-    public GerenteDeVendas(Estoque estoque) {
+    private RandomAccessFile objeto;
+    private String[] sai;
+    private int cont;
+    private final File arquivoLeitura = new File("Vendas.txt");
+    private ControleDeEstoque ctrl;
+
+    public GerenteDeVendas(Estoque estoque, ControleDeEstoque ctrl) throws NumberFormatException, IOException {
         vendas = new LinkedHashMap<Integer, Venda>();
         this.estoque=estoque;
         numeroVenda=-1;
+        this.ctrl=ctrl;
+        cadastraVendaArquivo(criarVetor());
      }
+     //getters
+     public Map<Integer,Venda> getVendasMap(){return vendas;}
      public int getVendas(){return vendas.size();}
     public int numeroVenda(){return numeroVenda;}
     public void addNumVenda(){numeroVenda++;}
 
+    ///cria o vetor do arquivo de vendas
+    public String[] criarVetor() throws IOException {
+        cont = 0;
+        long tamanhoArquivo = arquivoLeitura .length();
+        FileInputStream fs = new FileInputStream(arquivoLeitura);
+        DataInputStream in = new DataInputStream(fs); 
+        LineNumberReader lineRead = new LineNumberReader(new InputStreamReader(in));
+        lineRead.skip(tamanhoArquivo);
+        // conta o numero de linhas do arquivo, começa com zero, por isso adiciona 1
+        cont= lineRead.getLineNumber() + 1;
+        try {
+           File arq = new File("Vendas.txt");
+           
+           objeto = new RandomAccessFile(arq, "rw");
+           sai = new String[(int) objeto.length()]; // inicializa o vetor com o tamanho do arquivo
+           for (int i = 0; i < objeto.length(); i++) {
+               sai[i] = objeto.readLine();
+               }
+           return sai;
+        } catch (FileNotFoundException ex) { // trata as exceções do tipo FileNotFoundException
+           ex.printStackTrace();
+        } catch (IOException ex) { // trata as exceções do tipo IOException
+           ex.printStackTrace();
+        }
+        return null; // só retorna null se der algum erro
+   }
 
+   //cadastra as vendas do arquivo
+   public void cadastraVendaArquivo(String[] s) throws NumberFormatException, IOException {
+        String[] linha=s;
+         for(int i=0;i<cont;i++){ 
+            linha = s[i].split(";");
+            if(linha[0].equals("venda")){
+                i++;
+                addNumVenda();
+                Venda venda=new Venda();
+                vendas.put(numeroVenda, venda);
+                if(linha[1].equals("cancelada")){
+                    venda.setCancelada();       
+                }
+            do{ 
+                linha = s[i].split(";");
+                if(linha[0].equals("venda")){
+                    i--;
+                    break;
+                }
+                    venda.insereItem(estoque.existeProduto(Integer.parseInt(linha[0])), Integer.parseInt(linha[1]));
+                i++;
+            }while(i<cont);     
 
-    public void menuVendas(){
+            }
+        }
+
+}
+    //funcao que atualiza o estado do arquivo
+    public void atualizaArquivoVendas() throws IOException {
+        File arquivo = new File("Vendas.txt");
+        FileWriter fw=new FileWriter(arquivo, false);
+        BufferedWriter bw;
+        bw= new BufferedWriter(fw);
+        String s="";
+        Set<Integer> keySet =vendas.keySet();
+        for(int key : keySet){
+            Venda venda = vendas.get(key);
+            if(venda.getCancelada()){
+                s+="venda;cancelada;Recibo: "+key+"\n";
+            }
+            else{
+                s+="venda;aprovada;Recibo: "+key+"\n";
+            }
+            for(ItemDeVenda it: venda.getItens()){
+                s+= it.getProduto().getCodigo()+";"+it.getQuntidade()+"\n";
+            }           
+        }
+        s = s.substring (0, s.length() - 1);
+        bw.write(s);
+        bw.close();
+    }
+    public void menuVendas() throws IOException {
         Scanner entrada = new Scanner(System.in);
         int ID=0;
         int menu= 0;
@@ -52,10 +148,8 @@ public class GerenteDeVendas {
                     vendas.put(numeroVenda, venda);
                     realizarVenda(venda);
                     break;
-
                 case 2:
                     try{
-
                         System.out.print("\nInforme o numero da venda: ");
                         ID = entrada.nextInt();
                         cancelaVenda(ID);
@@ -68,7 +162,6 @@ public class GerenteDeVendas {
                     break;
                 case 4: 
                     try{
-
                         System.out.print("\nInforme o numero da venda: ");
                         ID = entrada.nextInt();
                         imprimeRecibo(ID);
@@ -83,13 +176,11 @@ public class GerenteDeVendas {
                     break;
                 default:
                     System.out.println("\nDigite SOMENTE números entre 1 e 5\n");
-                    break;
-
-
+                    break;              
             }
+            this.atualizaArquivoVendas();
+            this.ctrl.atualizaArquivoEstoque();
             }
-
-
     }
     //imprime o recibo de uma venda
     public void imprimeRecibo(int key){
@@ -126,7 +217,6 @@ public class GerenteDeVendas {
                 return str;
             }
             i++;
-
         }
         return str;
     }
@@ -149,11 +239,12 @@ public class GerenteDeVendas {
     }
 
     //funcao generica para funcoes lambdas fazerem as operacoes
-    public void percorreLista(OperacaoRelatorio oper){
+    public void percorreLista(OperacaoRelatorio oper) throws CloneNotSupportedException {
         Set<Integer> keySet =vendas.keySet();
         for(int key : keySet){
             Venda venda = vendas.get(key);
-            oper.operacaoRelatorio(key, venda);
+            Venda aux =(Venda)venda.clone();
+            oper.operacaoRelatorio(key, aux);
         }
     }
 
@@ -163,8 +254,7 @@ public class GerenteDeVendas {
         int ID=0;
         int menu= 0;
         boolean active=true;
-        while (active){
-    
+        while (active){ 
             System.out.println("\n>>>>>>>>>>> Menu Realizar Vendas <<<<<<<<<<<\n");
             System.out.println("Por favor escolha uma das opcoes: ");
             System.out.println("1 -> Adicionar item de venda");
@@ -183,10 +273,8 @@ public class GerenteDeVendas {
                  }
             }while(active2==true);
              switch(menu){
-
                 case 1:
                     try{
-
                         System.out.print("\nInforme Codigo do produto:");
                         ID = entrada.nextInt();
                         System.out.print("\nInforme a quantidade desse produto:");
@@ -206,8 +294,7 @@ public class GerenteDeVendas {
                             estoque.remQuantidade(ID, quantidade);
                             venda.insereItem(estoque.existeProduto(ID), quantidade);
                             System.out.println("Item de Venda adiconado");
-                        }
-                        
+                        }      
                     }
                     catch(InputMismatchException e){
                         System.out.println("Produto nao foi adicionado!!");
@@ -215,24 +302,22 @@ public class GerenteDeVendas {
                         break;
                     } 
                     break;
-
                 case 2:
-                try{
+                    try{
 
-                    System.out.print("\nInforme Codigo do produto que deseja remover:");
-                    ID = entrada.nextInt();
-                    if(venda.removeItemDeVenda(ID)){
-                        System.out.println("\nItemDeVenda Removido!!\n");
-                    }
-                    else{
-                        System.out.println("\n Nao existe um produto com esse codigo!!\n");
-                    }
-
-                }catch(InputMismatchException e){
+                        System.out.print("\nInforme Codigo do produto que deseja remover:");
+                        ID = entrada.nextInt();
+                        if(venda.removeItemDeVenda(ID)){
+                            System.out.println("\nItemDeVenda Removido!!\n");
+                        }
+                        else{
+                            System.out.println("\n Nao existe um produto com esse codigo!!\n");
+                        }
+                    }catch(InputMismatchException e){
                     System.out.println("Produto nao foi adicionado!!");
                     System.out.println("\nForneca entradas validas\nCodigo ->int \nnome -> String\nPreco unitario ->Double\nQuantidade inicial -> int\n");
                     break;
-                }
+                    }
                     break;
                 case 3:
                     if(venda.getValorVenda()<250){
@@ -242,7 +327,6 @@ public class GerenteDeVendas {
                     else{
                         System.out.print("\nInforme quantos por cento de desconto deseja aplicar:");
                         ID = entrada.nextInt();
-                        double desconto = venda.aplicaDesconto(ID);
                     }
                     break;
                 case 4:

@@ -1,0 +1,7 @@
+venda;aprovada;Recibo: 0
+2;8
+10;5
+venda;aprovada;Recibo: 1
+7;2
+2;8
+10;10

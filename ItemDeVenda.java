@@ -7,6 +7,12 @@ public class ItemDeVenda {
         this.produto=produto;
         this.quantidade=quantidade;
     }
+    public boolean mesmoProduto(Produto p){
+        if(this.getProduto()==p){
+            return true;
+        }
+        return false;
+    }
 
     public int getQuntidade() {return quantidade;}
     public void addQuantidade(int qtd){quantidade+=qtd;}

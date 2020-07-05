@@ -1,19 +1,41 @@
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.InputMismatchException;
 import java.util.Scanner;
 
 public class ControleDeEstoque {
     Estoque estoque;
-    public ControleDeEstoque(Estoque estoque){
-        this.estoque=estoque;
+
+    public ControleDeEstoque(Estoque estoque) {
+        this.estoque = estoque;
     }
-     public boolean disponvel(int codigo, int quantidade){
-        return estoque.disponivel(codigo, quantidade);    
+
+    public boolean disponvel(int codigo, int quantidade) {
+        return estoque.disponivel(codigo, quantidade);
     }
-    public void menuEstoque(){
-        int ID=0;
-        int menu= 0;
-        boolean active=true;
-        while (active){
+
+    public void atualizaArquivoEstoque() throws IOException {
+        File arquivo = new File("ItensDeEstoque.txt");
+        FileWriter fw=new FileWriter(arquivo, false);
+        BufferedWriter bw;
+        bw= new BufferedWriter(fw);
+        String s="";
+        for(ItemDeEstoque item : estoque.getItens()){
+            Produto p = item.getProduto();
+            s+=p.getCodigo() + ";"+p.getDescricao()+";"+p.getPrecoUnitario()+";"+item.getQuantidade()+"\n";
+        }
+        s = s.substring (0, s.length() - 1);
+        bw.write(s);
+        bw.close();
+    }
+
+    public void menuEstoque() throws IOException {
+        int ID = 0;
+        int menu = 0;
+        boolean active = true;
+        while (active) {
             Scanner entrada = new Scanner(System.in);
             System.out.println("\n>>>>>>>>>>> Menu Controle de Estoque <<<<<<<<<<<\n");
             System.out.println("Por favor escolha uma das opcoes: ");
@@ -22,20 +44,20 @@ public class ControleDeEstoque {
             System.out.println("3 -> Repor produto em estoque");
             System.out.println("4 -> Para sair do menu de controle de estoque");
             System.out.print("Escolha um item do menu:");
-            boolean active2 =true;
-       do{
-            if(entrada.hasNextInt()){
-                menu = entrada.nextInt();
-                active2 = false;
-            }else{
-                entrada.nextLine();
-                System.out.println("\nDigite SOMENTE números\n");
-            }
-       }while(active2==true);
-                switch(menu){
+            boolean active2 = true;
+            do {
+                if (entrada.hasNextInt()) {
+                    menu = entrada.nextInt();
+                    active2 = false;
+                } else {
+                    entrada.nextLine();
+                    System.out.println("\nDigite SOMENTE números\n");
+                }
+            } while (active2 == true);
+            switch (menu) {
 
                 case 1:
-                    try{
+                    try {
 
                         System.out.print("\nInforme Codigo do produto:");
                         ID = entrada.nextInt();
@@ -47,11 +69,13 @@ public class ControleDeEstoque {
                         int estoqueInicial = entrada.nextInt();
                         Produto produto = new Produto(ID, nome, aux);
                         estoque.cadastraProduto(produto, estoqueInicial);
-                    }
-                    catch(InputMismatchException e){
+                    } catch (InputMismatchException e) {
                         System.out.println("\nProduto nao foi adicionado!!");
-                        System.out.println("\nForneca entradas validas\nCodigo ->int \nnome -> String\nPreco unitario ->Double\nQuantidade inicial -> int\n");
+                        System.out.println(
+                                "\nForneca entradas validas\nCodigo ->int \nnome -> String\nPreco unitario ->Double\nQuantidade inicial -> int\n");
                         break;
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
                     break;
                     
@@ -68,7 +92,7 @@ public class ControleDeEstoque {
                 }catch(InputMismatchException e){
                         System.out.println("Digite Somente numeros!");
                     }
-                        break;
+                     break;
                 case 4:
                     System.out.println("\nSaindo do menu de controle de estoque\n");
                     active=false; 
@@ -76,9 +100,8 @@ public class ControleDeEstoque {
                 default:
                     System.out.println("\nDigite SOMENTE números entre 1 e 4\n");
                     break;
-
-
             }
+            this.atualizaArquivoEstoque();
             }
     }
 
